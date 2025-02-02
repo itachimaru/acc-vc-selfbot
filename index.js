@@ -1,14 +1,17 @@
 const { Client } = require('discord.js-selfbot-v13');
-const { joinVoiceChannel } = require("@discordjs/voice");
+const { joinVoiceChannel } = require('@discordjs/voice');
 
+// Initialize the client
 const client = new Client({ checkUpdate: false });
 
-const config = require(`${process.cwd()}/config.json`);
+// Get configuration from environment variables
+const token = process.env.DISCORD_TOKEN;
+const guildId = process.env.DISCORD_GUILD;
+const channelId = process.env.DISCORD_CHANNEL;
 
 client.on('ready', async () => {
     console.log(`Logged in as ${client.user.tag}!`);
-
-    await joinVC(client, config);
+    await joinVC(client, guildId, channelId);
 });
 
 client.on('voiceStateUpdate', async (oldState, newState) => {
@@ -20,20 +23,22 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
             // empty
         } else if (!newVoice) {
             if (oldState.member.id !== client.user.id) return;
-            await joinVC(client, config);
+            await joinVC(client, guildId, channelId);
         } else {
             if (oldState.member.id !== client.user.id) return;
-            if (newVoice !== config.Channel) {
-                await joinVC(client, config);
+            if (newVoice !== channelId) {
+                await joinVC(client, guildId, channelId);
             }
         }
     }
 });
-client.login(config.Token);
-// Copyright by sivvv0
-async function joinVC(client, config) {
-    const guild = client.guilds.cache.get(config.Guild);
-    const voiceChannel = guild.channels.cache.get(config.Channel);
+
+// Log in using the token from environment variable
+client.login(token);
+
+async function joinVC(client, guildId, channelId) {
+    const guild = client.guilds.cache.get(guildId);
+    const voiceChannel = guild.channels.cache.get(channelId);
     const connection = joinVoiceChannel({
         channelId: voiceChannel.id,
         guildId: guild.id,
