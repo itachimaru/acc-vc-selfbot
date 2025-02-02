@@ -1,49 +1,59 @@
+require('dotenv').config();
 const { Client } = require('discord.js-selfbot-v13');
 const { joinVoiceChannel } = require('@discordjs/voice');
 
-// Initialize the client
-const client = new Client({ checkUpdate: false });
+const channels = ['1269046886690590862'];
 
-// Get configuration from environment variables
-const token = process.env.DISCORD_TOKEN;
-const guildId = process.env.DISCORD_GUILD;
-const channelId = process.env.DISCORD_CHANNEL;
-
-client.on('ready', async () => {
-    console.log(`Logged in as ${client.user.tag}!`);
-    await joinVC(client, guildId, channelId);
-});
-
-client.on('voiceStateUpdate', async (oldState, newState) => {
-    const oldVoice = oldState.channelId;
-    const newVoice = newState.channelId;
-
-    if (oldVoice !== newVoice) {
-        if (!oldVoice) {
-            // empty
-        } else if (!newVoice) {
-            if (oldState.member.id !== client.user.id) return;
-            await joinVC(client, guildId, channelId);
-        } else {
-            if (oldState.member.id !== client.user.id) return;
-            if (newVoice !== channelId) {
-                await joinVC(client, guildId, channelId);
-            }
-        }
+const checkAndJoin = async (client, channelId) => {
+  try {
+    const channel = client.channels.cache.get(channelId);
+    if (!channel) {
+      console.error('Channel not found with ID: ${channelId}');
+      return;
     }
-});
 
-// Log in using the token from environment variable
-client.login(token);
+    const guild = channel.guild;
+    const member = guild.members.cache.get(client.user.id);
 
-async function joinVC(client, guildId, channelId) {
-    const guild = client.guilds.cache.get(guildId);
-    const voiceChannel = guild.channels.cache.get(channelId);
-    const connection = joinVoiceChannel({
-        channelId: voiceChannel.id,
+    if (!member) {
+      console.error('Bot is not a member of the guild (${guild.name}) associated with the channel ID: ${channelId}');
+      return;
+    }
+
+    const userVoiceState = guild.voiceStates.cache.get(member.id);
+
+    if (!userVoiceState || !userVoiceState.channelId) {
+      const voiceConnection = joinVoiceChannel({
+        channelId: channel.id,
         guildId: guild.id,
         adapterCreator: guild.voiceAdapterCreator,
+        selfMute: true,
         selfDeaf: false,
-        selfMute: true
-    });
-}
+      });
+
+      voiceConnection.once('stateChange', (state) => {
+        if (state.status === 'CONNECTED') {
+          console.log('${member.displayName} is in ${guild.name}');
+          console.log('Bot joined voice channel ${channel.name} in ${guild.name}');
+        }
+      });
+
+      voiceConnection.on('error', (error) => {
+        console.error('Error in voice connection:', error);
+      });
+    }
+  } catch (error) {
+    console.error('Error checking and joining:', error);
+  }
+};
+
+channels.forEach((channelId) => {
+  const client = new Client({ checkUpdate: false });
+
+  client.once('ready', () => {
+    checkAndJoin(client, channelId);
+    setInterval(() => checkAndJoin(client, channelId), 5000);
+  });
+
+  client.login(process.env.token2);
+});
