@@ -8,7 +8,7 @@ const checkAndJoin = async (client, channelId) => {
   try {
     const channel = client.channels.cache.get(channelId);
     if (!channel) {
-      console.error('Channel not found with ID: ${channelId}');
+      console.error(`Channel not found with ID: ${channelId}`);
       return;
     }
 
@@ -16,7 +16,7 @@ const checkAndJoin = async (client, channelId) => {
     const member = guild.members.cache.get(client.user.id);
 
     if (!member) {
-      console.error('Bot is not a member of the guild (${guild.name}) associated with the channel ID: ${channelId}');
+      console.error(`Bot is not a member of the guild (${guild.name}) associated with the channel ID: ${channelId}`);
       return;
     }
 
@@ -27,14 +27,14 @@ const checkAndJoin = async (client, channelId) => {
         channelId: channel.id,
         guildId: guild.id,
         adapterCreator: guild.voiceAdapterCreator,
-        selfMute: true,
+        selfMute: false,
         selfDeaf: false,
       });
 
       voiceConnection.once('stateChange', (state) => {
         if (state.status === 'CONNECTED') {
-          console.log('${member.displayName} is in ${guild.name}');
-          console.log('Bot joined voice channel ${channel.name} in ${guild.name}');
+          console.log(`${member.displayName} is in ${guild.name}`);
+          console.log(`Bot joined voice channel ${channel.name} in ${guild.name}`);
         }
       });
 
@@ -51,9 +51,10 @@ channels.forEach((channelId) => {
   const client = new Client({ checkUpdate: false });
 
   client.once('ready', () => {
+    console.log(`Logged in as ${client.user.tag}`);
     checkAndJoin(client, channelId);
     setInterval(() => checkAndJoin(client, channelId), 5000);
   });
 
-  client.login(process.env.token2);
+  client.login(process.env.DISCORD_TOKEN); // Load token from environment variables
 });
